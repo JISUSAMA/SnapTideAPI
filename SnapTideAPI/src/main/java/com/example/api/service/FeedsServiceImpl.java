@@ -129,8 +129,8 @@ public class FeedsServiceImpl implements FeedsService {
       }
     }
   }
-  @Override
   @Transactional
+  @Override
   public void modifyWithFiles(FeedsDTO feedsDTO, List<MultipartFile> images, List<String> deletedImages) {
     Optional<Feeds> optionalFeeds = feedsRepository.findById(feedsDTO.getFno());
     if (!optionalFeeds.isPresent()) {
@@ -138,33 +138,29 @@ public class FeedsServiceImpl implements FeedsService {
     }
 
     Feeds feeds = optionalFeeds.get();
-    Map<String, Object> entityMap = dtoToEntity(feedsDTO);
-
-    // 피드 제목 수정
     feeds.changeTitle(feedsDTO.getTitle());
     feedsRepository.save(feeds);
 
-    // 기존 이미지 처리
-    List<Photos> oldPhotosList = photosRepository.findByMno(feeds.getFno());
+    // 1. 삭제된 이미지 처리
     if (deletedImages != null) {
       deletedImages.forEach(uuid -> {
-        photosRepository.deleteByUuid(uuid);
-        oldPhotosList.removeIf(photo -> photo.getUuid().equals(uuid));
+        photosRepository.deleteByUuid(uuid); // DB에서 삭제
+        deleteFile(uuid); // 파일 시스템에서 삭제
       });
     }
 
-    // 새 이미지 저장
+    // 2. 새 이미지 저장
     if (images != null && !images.isEmpty()) {
       images.forEach(image -> {
         try {
-          String fileName = saveFile(image);
+          String savedFileName = saveFile(image); // 파일 저장
           Photos photo = Photos.builder()
               .uuid(UUID.randomUUID().toString())
               .photosName(image.getOriginalFilename())
-              .path(uploadPath)
+              .path(savedFileName) // 저장된 경로
               .feeds(feeds)
               .build();
-          photosRepository.save(photo);
+          photosRepository.save(photo); // DB에 저장
         } catch (Exception e) {
           log.error("Error saving image: {}", e.getMessage());
         }
@@ -172,25 +168,40 @@ public class FeedsServiceImpl implements FeedsService {
     }
   }
 
+
   private String saveFile(MultipartFile file) throws Exception {
+    File uploadDir = new File(uploadPath);
+    if (!uploadDir.exists()) {
+      boolean dirCreated = uploadDir.mkdirs();
+      if (!dirCreated) {
+        throw new RuntimeException("Failed to create upload directory: " + uploadPath);
+      }
+      log.info("Upload directory created: {}", uploadPath);
+    }
+
     String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
     String fullPath = uploadPath + File.separator + fileName;
-    file.transferTo(new File(fullPath));
-    return fullPath;
+    File destinationFile = new File(fullPath);
+
+    file.transferTo(destinationFile); // 파일 저장
+    log.info("Saved file: {}", fullPath);
+
+    return fileName;
   }
 
+
   private void deleteFile(String fileName) {
-    // 실제 파일도 지우기
-    String searchFilename = null;
     try {
-      searchFilename = URLDecoder.decode(fileName, "UTF-8");
-      File file = new File(uploadPath + File.separator + searchFilename);
-      file.delete();
-      new File(file.getParent(), "s_" + file.getName()).delete();
+      File file = new File(uploadPath + File.separator + fileName);
+      if (file.exists()) {
+        file.delete();
+        log.info("Deleted file: {}", fileName);
+      }
     } catch (Exception e) {
-      log.error(e.getMessage());
+      log.error("Error deleting file: {}", e.getMessage());
     }
   }
+
 
   @Transactional
   @Override

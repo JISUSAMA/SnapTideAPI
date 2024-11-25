@@ -56,8 +56,13 @@ public class FeedsController {
 
     return new ResponseEntity<>(feedsDTO, HttpStatus.OK);
   }
+  @PostMapping(value = "/register", consumes = "application/json", produces = "application/json")
+  public ResponseEntity<Long> registerFeed(@RequestBody FeedsDTO feedsDTO) {
+    log.info(">>"+feedsDTO);
+    Long fno = feedsService.register(feedsDTO);
+    return new ResponseEntity<>(fno, HttpStatus.OK);
+  }
 
-  // 피드 수정
   @PostMapping(value = "/modify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<String> modify(
       @RequestPart("feed") FeedsDTO feedsDTO,
@@ -66,11 +71,16 @@ public class FeedsController {
 
     log.info("Modifying Feed: {}", feedsDTO);
 
-    // 서비스 계층 호출
-    feedsService.modifyWithFiles(feedsDTO, images, deletedImages);
-
-    return ResponseEntity.ok("Feed modified successfully");
+    try {
+      feedsService.modifyWithFiles(feedsDTO, images, deletedImages);
+      return ResponseEntity.ok("Feed modified successfully");
+    } catch (Exception e) {
+      log.error("Failed to modify feed: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Feed modification failed");
+    }
   }
+
+
 
   // 피드 삭제
   @DeleteMapping("/{fno}")

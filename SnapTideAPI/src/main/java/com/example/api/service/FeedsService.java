@@ -34,25 +34,22 @@ public interface FeedsService {
 
   default Map<String, Object> dtoToEntity(FeedsDTO feedsDTO) {
     Map<String, Object> entityMap = new HashMap<>();
-    Feeds feeds = Feeds.builder().fno(feedsDTO.getFno())
-        .title(feedsDTO.getTitle()).build();
+    Feeds feeds = Feeds.builder()
+        .fno(feedsDTO.getFno())
+        .title(feedsDTO.getTitle())
+        .build();
     entityMap.put("feeds", feeds);
+
     List<PhotosDTO> photosDTOList = feedsDTO.getPhotosDTOList();
-    if (photosDTOList != null && photosDTOList.size() > 0) {
-      List<Photos> photosList = photosDTOList.stream().map(
-          new Function<PhotosDTO, Photos>() {
-            @Override
-            public Photos apply(PhotosDTO photosDTO) {
-              Photos photos = Photos.builder()
-                  .path(photosDTO.getPath())
-                  .photosName(photosDTO.getPhotosName())
-                  .uuid(photosDTO.getUuid())
-                  .feeds(feeds)
-                  .build();
-              return photos;
-            }
-          }
-      ).collect(Collectors.toList());
+    if (photosDTOList != null && !photosDTOList.isEmpty()) {
+      List<Photos> photosList = photosDTOList.stream()
+          .map(photosDTO -> Photos.builder()
+              .path(photosDTO.getPath()) // path 값이 저장된 파일의 경로와 일치해야 함
+              .photosName(photosDTO.getPhotosName())
+              .uuid(photosDTO.getUuid())
+              .feeds(feeds)
+              .build())
+          .collect(Collectors.toList());
       entityMap.put("photosList", photosList);
     }
     return entityMap;
