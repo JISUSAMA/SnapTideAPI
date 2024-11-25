@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e15f4b2e-5162-4a7b-a73d-1b859badd979" name="Changes" comment="" />
+    <list default="true" id="e15f4b2e-5162-4a7b-a73d-1b859badd979" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/api/controller/FeedsController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/api/controller/FeedsController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/api/service/FeedsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/api/service/FeedsService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/api/service/FeedsServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/api/service/FeedsServiceImpl.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -33,18 +38,18 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.ApiApplication.executor": "Run",
-    "JUnit.FeedsRepositoryTests.insertFeeds.executor": "Run",
-    "JUnit.MembersRepositoryTests.insertMembers.executor": "Run",
-    "JUnit.ReviewRepositoryTests.insertReviews.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "com.codeium.enabled": "true",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.ApiApplication.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.FeedsRepositoryTests.insertFeeds.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MembersRepositoryTests.insertMembers.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ReviewRepositoryTests.insertReviews.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Application.ApiApplication">
     <configuration name="ApiApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="com.example.api.ApiApplication" />

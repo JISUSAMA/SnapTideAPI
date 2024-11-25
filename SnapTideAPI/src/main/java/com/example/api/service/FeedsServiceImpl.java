@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.net.URLDecoder;
@@ -47,7 +48,6 @@ public class FeedsServiceImpl implements FeedsService {
     }
     return feeds.getFno();
   }
-
   @Override
   public PageResultDTO<FeedsDTO, Object[]> getList(PageRequestDTO pageRequestDTO) {
     Pageable pageable = pageRequestDTO.getPageable(Sort.by("fno").descending());
@@ -128,6 +128,55 @@ public class FeedsServiceImpl implements FeedsService {
         });
       }
     }
+  }
+  @Override
+  @Transactional
+  public void modifyWithFiles(FeedsDTO feedsDTO, List<MultipartFile> images, List<String> deletedImages) {
+    Optional<Feeds> optionalFeeds = feedsRepository.findById(feedsDTO.getFno());
+    if (!optionalFeeds.isPresent()) {
+      throw new IllegalArgumentException("Feed not found for ID: " + feedsDTO.getFno());
+    }
+
+    Feeds feeds = optionalFeeds.get();
+    Map<String, Object> entityMap = dtoToEntity(feedsDTO);
+
+    // 피드 제목 수정
+    feeds.changeTitle(feedsDTO.getTitle());
+    feedsRepository.save(feeds);
+
+    // 기존 이미지 처리
+    List<Photos> oldPhotosList = photosRepository.findByMno(feeds.getFno());
+    if (deletedImages != null) {
+      deletedImages.forEach(uuid -> {
+        photosRepository.deleteByUuid(uuid);
+        oldPhotosList.removeIf(photo -> photo.getUuid().equals(uuid));
+      });
+    }
+
+    // 새 이미지 저장
+    if (images != null && !images.isEmpty()) {
+      images.forEach(image -> {
+        try {
+          String fileName = saveFile(image);
+          Photos photo = Photos.builder()
+              .uuid(UUID.randomUUID().toString())
+              .photosName(image.getOriginalFilename())
+              .path(uploadPath)
+              .feeds(feeds)
+              .build();
+          photosRepository.save(photo);
+        } catch (Exception e) {
+          log.error("Error saving image: {}", e.getMessage());
+        }
+      });
+    }
+  }
+
+  private String saveFile(MultipartFile file) throws Exception {
+    String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+    String fullPath = uploadPath + File.separator + fileName;
+    file.transferTo(new File(fullPath));
+    return fullPath;
   }
 
   private void deleteFile(String fileName) {

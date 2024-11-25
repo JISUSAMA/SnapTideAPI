@@ -6,6 +6,8 @@ import com.example.api.dto.PageResultDTO;
 import com.example.api.dto.PhotosDTO;
 import com.example.api.entity.Feeds;
 import com.example.api.entity.Photos;
+import jakarta.transaction.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +24,9 @@ public interface FeedsService {
   FeedsDTO getFeeds(Long fno);
 
   void modify(FeedsDTO feedsDTO);
+
+  @Transactional
+  void modifyWithFiles(FeedsDTO feedsDTO, List<MultipartFile> images, List<String> deletedImages);
 
   List<String> removeWithReviewsAndPhotos(Long fno);
 
