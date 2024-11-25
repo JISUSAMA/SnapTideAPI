@@ -15,7 +15,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -33,26 +35,19 @@ public class SecurityConfig {
   }
 
   @Bean
-  public ApiLoginFilter apiLoginFilter(
-      AuthenticationConfiguration authenticationConfiguration) throws Exception {
+  public ApiLoginFilter apiLoginFilter(AuthenticationConfiguration authenticationConfiguration) throws Exception {
     ApiLoginFilter apiLoginFilter = new ApiLoginFilter("/auth/login", jwtUtil());
-    apiLoginFilter.setAuthenticationManager(
-        authenticationConfiguration.getAuthenticationManager());
+    apiLoginFilter.setAuthenticationManager(authenticationConfiguration.getAuthenticationManager());
     apiLoginFilter.setAuthenticationFailureHandler(new ApiLoginFailHandler());
     return apiLoginFilter;
   }
 
-  @Bean   //자체적으로 AuthenticationManager을 생성하기 위한 Bean
-  public AuthenticationManager authenticationManager(
-      AuthenticationConfiguration conf) throws Exception {
+  @Bean
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration conf) throws Exception {
     return conf.getAuthenticationManager();
   }
 
-  // String 배열에 정의된 주소는 token으로 인증해야만 접근할 수 있는 주소.
-  String[] checkAddress = {"/feeds/**", "/members/**", "/reviews/**", "/reviews/all/**"
-//      , "/uploadAjax/**", "/removeFile/**"
-//      ,"/display/**"
-  };
+  String[] checkAddress = {"/feeds/**", "/members/**", "/reviews/**", "/reviews/all/**"};
 
   @Bean
   public ApiCheckFilter apiCheckFilter() {
@@ -60,34 +55,38 @@ public class SecurityConfig {
   }
 
   @Bean
-  protected SecurityFilterChain config(HttpSecurity httpSecurity)
-      throws Exception {
-    // csrf 사용안하는 설정 Cross-Site Request Forgery
-    httpSecurity.csrf(httpSecurityCsrfConfigurer -> {
-      httpSecurityCsrfConfigurer.disable();
-    });
+  protected SecurityFilterChain config(HttpSecurity httpSecurity) throws Exception {
+    httpSecurity
+        .csrf(csrf -> csrf.disable()) // CSRF 비활성화
+        .cors().and() // CORS 활성화
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/auth/login").permitAll()
+            .requestMatchers("/feeds/**").permitAll()
+            .requestMatchers("/members/**").permitAll()
+            .requestMatchers("/reviews/**").permitAll()
+            .requestMatchers("/uploadAjax").permitAll() // 파일 업로드 허용
+            .requestMatchers("/removeFile").permitAll() // 파일 삭제 허용
+            .requestMatchers("/display").permitAll() // 이미지 표시 허용
+            .anyRequest().authenticated());
 
-    httpSecurity.authorizeHttpRequests(
-        auth -> auth
-            .requestMatchers(new AntPathRequestMatcher("/feeds/**")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/members/**")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/reviews/**")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/reviews/all/**")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/uploadAjax/**")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/display/**")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/removeFile/**")).permitAll()
-            .anyRequest().denyAll());
+    httpSecurity.addFilterBefore(apiCheckFilter(), UsernamePasswordAuthenticationFilter.class);
+    httpSecurity.addFilterBefore(apiLoginFilter(httpSecurity.getSharedObject(AuthenticationConfiguration.class)),
+        UsernamePasswordAuthenticationFilter.class);
 
-    // addFilterBefore는 일반적 필터링 순서보다 앞쪽에서 필터링하도록 순서 조정.
-    httpSecurity.addFilterBefore(
-        apiCheckFilter(), UsernamePasswordAuthenticationFilter.class);
-    // BasicAuthenticationFilter.class 도 사용가능
-
-    httpSecurity.addFilterBefore(
-        apiLoginFilter(httpSecurity.getSharedObject(AuthenticationConfiguration.class)),
-        UsernamePasswordAuthenticationFilter.class
-    );
     return httpSecurity.build();
   }
 
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.addAllowedOrigin("http://localhost:3000"); // React 포트 3000
+    configuration.addAllowedOrigin("http://localhost:3001"); // React 포트 3001 추가
+    configuration.addAllowedMethod("*"); // 모든 HTTP 메서드 허용
+    configuration.addAllowedHeader("*"); // 모든 헤더 허용
+    configuration.setAllowCredentials(true); // 인증 정보 허용
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+  }
 }

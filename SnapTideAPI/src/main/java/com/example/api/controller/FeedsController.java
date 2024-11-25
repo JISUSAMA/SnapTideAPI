@@ -93,7 +93,7 @@ public class FeedsController {
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
 
-  @PostMapping(value = "/remove/{fno}", produces = MediaType.APPLICATION_JSON_VALUE)
+  @DeleteMapping(value = "/{fno}", produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<Map<String, String>> remove(
       @PathVariable Long fno, @RequestBody(required = false) PageRequestDTO pageRequestDTO) {
 
@@ -131,4 +131,5 @@ public class FeedsController {
     result.put("keyword", pageRequestDTO.getKeyword());
     return new ResponseEntity<>(result, HttpStatus.OK);
   }
+
 }
