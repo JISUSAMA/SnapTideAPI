@@ -11,6 +11,7 @@ import com.example.api.repository.ReviewsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import net.coobird.thumbnailator.Thumbnailator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,6 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.net.URLDecoder;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -144,8 +147,21 @@ public class FeedsServiceImpl implements FeedsService {
     // 1. 삭제된 이미지 처리
     if (deletedImages != null) {
       deletedImages.forEach(uuid -> {
-        photosRepository.deleteByUuid(uuid); // DB에서 삭제
-        deleteFile(uuid); // 파일 시스템에서 삭제
+        Photos photo = photosRepository.findByUuid(uuid);
+        if (photo != null) {
+          // 원본 파일 경로
+          String originalFilePath = photo.getPath() + File.separator + photo.getUuid() + "_" + photo.getPhotosName();
+
+          // 썸네일 파일 경로
+          String thumbnailFilePath = photo.getPath() + File.separator + "s_" + photo.getUuid() + "_" + photo.getPhotosName();
+
+          // 파일 삭제
+          deleteFile(originalFilePath);
+          deleteFile(thumbnailFilePath);
+
+          // DB에서 삭제
+          photosRepository.deleteByUuid(uuid);
+        }
       });
     }
 
@@ -153,14 +169,34 @@ public class FeedsServiceImpl implements FeedsService {
     if (images != null && !images.isEmpty()) {
       images.forEach(image -> {
         try {
-          String savedFileName = saveFile(image); // 파일 저장
+          // 폴더 경로 생성
+          String folderPath = makeFolder(); // "2024\11\28" 반환
+
+          // 파일 이름 생성
+          String uuid = UUID.randomUUID().toString();
+          String fileName = uuid + "_" + image.getOriginalFilename();
+
+          // 원본 파일 저장 경로
+          String saveName = uploadPath + File.separator + folderPath + File.separator + fileName;
+          File saveFile = new File(saveName);
+
+          // 파일 저장
+          image.transferTo(saveFile);
+
+          // 썸네일 생성
+          String thumbnailSaveName = uploadPath + File.separator + folderPath + File.separator + "s_" + fileName;
+          File thumbnailFile = new File(thumbnailSaveName);
+          Thumbnailator.createThumbnail(saveFile, thumbnailFile, 100, 100);
+
+          // DB에 저장
           Photos photo = Photos.builder()
-              .uuid(UUID.randomUUID().toString())
-              .photosName(image.getOriginalFilename())
-              .path(savedFileName) // 저장된 경로
+              .uuid(uuid)
+              .photosName(image.getOriginalFilename()) // 원래 파일명 저장
+              .path(folderPath) // 폴더 경로만 저장
               .feeds(feeds)
               .build();
-          photosRepository.save(photo); // DB에 저장
+
+          photosRepository.save(photo);
         } catch (Exception e) {
           log.error("Error saving image: {}", e.getMessage());
         }
@@ -169,39 +205,62 @@ public class FeedsServiceImpl implements FeedsService {
   }
 
 
+
   private String saveFile(MultipartFile file) throws Exception {
-    File uploadDir = new File(uploadPath);
+    // 폴더 경로 생성 (예: yyyy\MM\dd)
+    String folderPath = makeFolder(); // 폴더 경로 생성 (2024\11\28 형태)
+
+    // 업로드 디렉터리 생성
+    File uploadDir = new File(uploadPath + File.separator + folderPath);
     if (!uploadDir.exists()) {
       boolean dirCreated = uploadDir.mkdirs();
       if (!dirCreated) {
-        throw new RuntimeException("Failed to create upload directory: " + uploadPath);
+        throw new RuntimeException("Failed to create upload directory: " + uploadDir.getPath());
       }
-      log.info("Upload directory created: {}", uploadPath);
+      log.info("Upload directory created: {}", uploadDir.getPath());
     }
 
-    String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-    String fullPath = uploadPath + File.separator + fileName;
+    // 파일 이름 생성
+    String uuid = UUID.randomUUID().toString();
+    String fileName = uuid + "_" + file.getOriginalFilename();
+
+    // 전체 경로 생성
+    String fullPath = uploadDir.getPath() + File.separator + fileName;
     File destinationFile = new File(fullPath);
 
-    file.transferTo(destinationFile); // 파일 저장
+    // 파일 저장
+    file.transferTo(destinationFile);
     log.info("Saved file: {}", fullPath);
 
-    return fileName;
+    // 폴더 경로만 반환
+    return folderPath; // "2024\11\28"만 반환
   }
 
 
-  private void deleteFile(String fileName) {
+  private String makeFolder() {
+    // yyyy\MM\dd 형식으로 폴더 경로 생성
+    String str = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy\\MM\\dd"));
+    String folderPath = str;
+
+    // 디렉토리 생성
+    File uploadPathFolder = new File(uploadPath, folderPath);
+    if (!uploadPathFolder.exists()) {
+      uploadPathFolder.mkdirs();
+    }
+    return folderPath;
+  }
+
+  private void deleteFile(String filePath) {
     try {
-      File file = new File(uploadPath + File.separator + fileName);
+      File file = new File(uploadPath + File.separator + filePath);
       if (file.exists()) {
         file.delete();
-        log.info("Deleted file: {}", fileName);
+        log.info("Deleted file: {}", filePath);
       }
     } catch (Exception e) {
       log.error("Error deleting file: {}", e.getMessage());
     }
   }
-
 
   @Transactional
   @Override
